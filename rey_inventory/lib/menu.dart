@@ -14,7 +14,7 @@ class MyHomePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.amber,
         title: const Text(
-          'Shopping List',
+          'Rey Inventory',
         ),
       ),
       body: SingleChildScrollView(
