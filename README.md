@@ -1,9 +1,186 @@
+## Tugas 9
+
+### Apakah bisa melakukan pengambilan data JSON tanpa membuat model terlebih dahulu? Jika iya, apakah hal tersebut lebih baik daripada membuat model sebelum melakukan pengambilan data JSON
+
+Bisa, hal ini dilakukan pada tugas kali dengan mem"parse" data JSON kita ke website [Quicktype](https://app.quicktype.io/). Cara pengambilan data JSON tanpa membuat model ini dikenal dengan istilah "parsing" atau "decoding". Cara ini memiliki beberapa kelebihan dan kekurangan jika dibandingkan dengan membuat model.
+
+|                                       **Tanpa Model**                                       |                            **Dengan Model**                            |
+| :-----------------------------------------------------------------------------------------: | :--------------------------------------------------------------------: |
+|          Cocok jika struktur data tidak terstruktur / dapat berubah secara dinamis          |               Cocok untuk struktur data yang terstruktur               |
+|                    Kurang cocok untuk analisis data yang lebih kompleks                     |                Cocok untuk analisis data yang kompleks                 |
+| Mengambil data menjadi lebih cepat karena tidak ada langkah pembuatan model yang diperlukan | Pengambilan data perlu melakukan langkah-langkah dalam pembuatan model |
+
+### Fungsi dari CookieRequest dan mengapa perlu dibagikan ke semua komponen di aplikasi flutter
+
+Fungsi dari CookieRequest adalah mengirim permintaan HTTP beserta cookie. Dengan fungsi ini, kita dapat mengirim permintaan sambil menyertakan cookie tertentu yang diperlukan oleh server. Pembagian CookieRequest ke semua komponen di aplikasi dilakukan untuk menjaga konsistensi pengelolaan cookie yang dilakukan oleh tiap-tiap komponen. Jadi jika ada perubahaan logika pada CookieRequest, maka setiap komponennya juga akan mencerminkan perubahan yang terjadi.
+
+### Jelaskan mekanisme pengambilan data dari JSON hingga dapat ditampilkan pada flutter
+
+Jika pengambilan data dilakukan dari API, kita dapat menggunakan metode HTTP seperti GET untuk mendapatkan respons yang berisi data JSON. Lalu, kita bisa menggunakan metode penguraian JSON bawaan Flutter yang menggunakan kelas dart:convert untuk mengubah string JSON menjadi struktur data yang dapat diakses di flutter. Atau jika ingin data JSON memiliki struktur yang tetap dan ingin menggunakan objek Dart yang sesuai, kita bisa membuat model objeknya. Lalu, kita dapat menggunakan widget dari Flutter untuk menampilkan data serta menavigasi pengguna untuk melihat data.
+
+### Jelaskan mekanisme autentikasi dari input data akun pada Flutter ke Django hingga selesainya proses autentikasi oleh Django dan tampilnya menu pada Flutter
+
+1. User memasukan data akun seperti username dan password.
+2. Data yang dimasukan akan dikirim oleh Flutter ke server Django menggunakan permintaan HTTP, seperti POST request.
+3. Django menerima data akun dari Flutter, kemudian melakukan verifikasi.
+4. Setelah diverifikasi, Django mengirim status autentikasi ke aplikasi Flutter. Status ini dapat berupa token autentikasi yang valid atau pesan kesalahan jika login gagal
+5. Jika berhasil, maka Flutter akan menampilkan menu / halaman yang sesuai dengan pengguna yang terautentikasi.
+
+### Sebutkan seluruh widget yang dipakai pada tugas ini serta fungsinya masing masing
+
+Selain layout widgets yang sudah dijelaskan pada tugas 7, beberapa widget lainnya yang digunakan pada tugas kali ini adalah:
+
+1. AppBar
+
+Menampilan sebuah text yang center-alligned, serta memiliki warna dan background color
+
+2. Form
+
+Menampilkan form yang dapat menerima input dari user
+
+3. ElevatedButton
+
+Widget tombol yang dapat diklik
+
+4. Navigator
+
+Berguna untuk navigasi antar halaman
+
+5. Provider
+
+Berguna untuk meng-_manage_ state dari CookieRequest.
+
+### Jelaskan implementasi secara step-by-step
+
+1. Membuat halaman login yang terintegrasi dengan project tugas Django dengan membuat file autentikasi pada Django, menginstall dan menambahkan library yang dibutuhkan dengan menjalankan `pip install django-cors-headers`, lalu menambahkan Cookies dengan menambahkan kode berikut ke settings.py:
+
+```
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'None'
+```
+
+2. Membuat fungsi login pada views.py di file autentikasi lalu menghubungkannya ke urls.py
+
+```
+from django.shortcuts import render
+from django.contrib.auth import authenticate, login as auth_login
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def login(request):
+    username = request.POST['username']
+    password = request.POST['password']
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        if user.is_active:
+            auth_login(request, user)
+            # Status login sukses.
+            return JsonResponse({
+                "username": user.username,
+                "status": True,
+                "message": "Login sukses!"
+                # Tambahkan data lainnya jika ingin mengirim data ke Flutter.
+            }, status=200)
+        else:
+            return JsonResponse({
+                "status": False,
+                "message": "Login gagal, akun dinonaktifkan."
+            }, status=401)
+
+    else:
+        return JsonResponse({
+            "status": False,
+            "message": "Login gagal, periksa kembali email atau kata sandi."
+        }, status=401)
+```
+
+3. Membuat kustom model sesuai dengan proyek aplikasi Django dengan mem-parse data JSON dari tugas Django sebelumnya dengan menggunakan website Quicktype dan menyimpan kode Quicktype tersebut ke tugas Flutter.
+
+```
+// To parse this JSON data, do
+//
+//     final product = productFromJson(jsonString);
+
+import 'dart:convert';
+
+List<Product> productFromJson(String str) => List<Product>.from(json.decode(str).map((x) => Product.fromJson(x)));
+
+String productToJson(List<Product> data) => json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
+
+class Product {
+    String model;
+    int pk;
+    Fields fields;
+
+    Product({
+        required this.model,
+        required this.pk,
+        required this.fields,
+    });
+
+    factory Product.fromJson(Map<String, dynamic> json) => Product(
+        model: json["model"],
+        pk: json["pk"],
+        fields: Fields.fromJson(json["fields"]),
+    );
+
+    Map<String, dynamic> toJson() => {
+        "model": model,
+        "pk": pk,
+        "fields": fields.toJson(),
+    };
+}
+
+class Fields {
+    int user;
+    String name;
+    DateTime dateAdded;
+    int amount;
+    String description;
+
+    Fields({
+        required this.user,
+        required this.name,
+        required this.dateAdded,
+        required this.amount,
+        required this.description,
+    });
+
+    factory Fields.fromJson(Map<String, dynamic> json) => Fields(
+        user: json["user"],
+        name: json["name"],
+        dateAdded: DateTime.parse(json["date_added"]),
+        amount: json["amount"],
+        description: json["description"],
+    );
+
+    Map<String, dynamic> toJson() => {
+        "user": user,
+        "name": name,
+        "date_added": "${dateAdded.year.toString().padLeft(4, '0')}-${dateAdded.month.toString().padLeft(2, '0')}-${dateAdded.day.toString().padLeft(2, '0')}",
+        "amount": amount,
+        "description": description,
+    };
+}
+```
+
+4. Membuat halaman yang berisi daftar item yang terdapat pada endpoint JSON di tugas Django. Hal ini dilakukan dengan menghubungkan web tugas Django ke tugas Flutter, lalu membuat halaman berdasarkan data JSON yang telah diambil dari website Quicktype sebelumnya.
+
+5. Membuat halaman yang berisi detail item. Hal ini dilakukan dengan membuat tombol detail pada list_product.dart yang akan mengarahkan user ke halaman detail_product.dart
+
 ## Tugas 8
 
 ### Perbedaan Navigator.push() dan Navigator.pushReplacement()
-Navigation pada flutter berfungsi untuk mengarahkan pengguna ke halaman yang mereka inginkan. Salah satu dari method yang terdapat pada class Navigator adalah .push() dan .pushReplacement(). 
 
-* .push() digunakan untuk menambah layar baru pada posisi top dari stack Navigator. Hal ini memungkinkan pengguna untuk kembali ke layar sebelumnya dengan melakukan method .pop(). Contoh:
+Navigation pada flutter berfungsi untuk mengarahkan pengguna ke halaman yang mereka inginkan. Salah satu dari method yang terdapat pada class Navigator adalah .push() dan .pushReplacement().
+
+- .push() digunakan untuk menambah layar baru pada posisi top dari stack Navigator. Hal ini memungkinkan pengguna untuk kembali ke layar sebelumnya dengan melakukan method .pop(). Contoh:
+
 ```
 Navigator.push(
   context,
@@ -11,7 +188,7 @@ Navigator.push(
 );
 ```
 
-* .pushReplacement() digunakan untuk mengganti layar yang sedang ditampilkan dengan layar lain. Hal ini membuat pengguna tidak dapat kembali ke layar sebelumnya karena layar sebelumnya sudah di-replace dengan layar yang baru
+- .pushReplacement() digunakan untuk mengganti layar yang sedang ditampilkan dengan layar lain. Hal ini membuat pengguna tidak dapat kembali ke layar sebelumnya karena layar sebelumnya sudah di-replace dengan layar yang baru
 
 ```
 Navigator.pushReplacement(
@@ -20,11 +197,12 @@ Navigator.pushReplacement(
 );
 ```
 
-Visualisasi : 
+Visualisasi :
 <br>
 <img width="291" alt="image" src="https://github.com/reyhanwiyasa/rey_inventory_mobile/assets/119433464/671efd9b-e5f0-4b0e-9dea-742f0a0737b5">
 
 ### Layout widget pada flutter
+
 Beberapa contoh layout widget pada flutter adalah :
 
 1. Container
@@ -86,6 +264,7 @@ ListView(
 4. GridView
 
 Membuat widget grid yang dapat discroll
+
 ```
 GridView.count(
   crossAxisCount: 2,
@@ -98,6 +277,7 @@ GridView.count(
 ```
 
 ### Elemen input pada form
+
 Pada tugas ini, elemen input yang digunakan pada form adalah `TextFormField`. Elemen ini digunakan untuk menerima input teks dari user.
 
 Beberapa manfaat dari TextFormField :
@@ -116,12 +296,13 @@ TextFormField memiliki properti 'inputFormatters' sehingga pengguna dapat memasu
 
 4. Obscure Text (Password input)
 
-  TextFormField memiliki properti 'obscureText' untuk menutup informasi sensitif seperti password.
+TextFormField memiliki properti 'obscureText' untuk menutup informasi sensitif seperti password.
 
 ### Bagaimana penerapan clean architecture pada flutter?
+
 Clean architecture adalah filosofi design yang bertujuan untuk membuat software yang maintainable dengan menggunakan konsep SoC dan meminimalisir dependancy.
 
-Clean architecture pada flutter membagi codebase kita menjadi lapisan, dengan tanggung jawab dan dependency masing-masing. Umumnya, lapisan yang dimaksud adalah Presentation, Domain, dan Data. Presentation layer digunakan untuk berkomunikasi dengan use case (domain layer), dan domain layer akan  berinteraksi dengan repository (data layer) untuk melakukan read/write data
+Clean architecture pada flutter membagi codebase kita menjadi lapisan, dengan tanggung jawab dan dependency masing-masing. Umumnya, lapisan yang dimaksud adalah Presentation, Domain, dan Data. Presentation layer digunakan untuk berkomunikasi dengan use case (domain layer), dan domain layer akan berinteraksi dengan repository (data layer) untuk melakukan read/write data
 
 ### Implementasi checklist secara step-by-step
 
@@ -415,6 +596,7 @@ return Scaffold(
       drawer: const LeftDrawer(),
     );
 ```
+
 4. Memasukan variabel drawer tadi ke form
 
 ```
@@ -470,13 +652,15 @@ class _ShopFormPageState extends State<ShopFormPage> {
 
 <img width="93" alt="image" src="https://github.com/reyhanwiyasa/rey_inventory_mobile/assets/119433464/1818905f-019d-451f-9386-47135939ca77">
 
-
 ## Tugas 7
+
 ### Perbedaan _stateless_ dan _stateful widget_ dalam konteks pengembangan aplikasi flutter
+
 _Stateless widget_ adalah widget yang tidak memiliki _state_, yang berarti mereka tidak dapat mengubah dirinya sendiri melalui aksi internal. _Stateless widget_ dapat berubah ketika terjadi _external events_ yang berasal dari _parent widgets_ pada _widgets tree_
 <br>
 
 _Stateless widgets_ akan menerima deskripsinya dari parentnya. Ia tidak dapat mengubah deskripsi dirinya sendiri. _Stateless widgets_ hanya memiliki properti **final** saat konstruksinya. Widgets ini yang akan ditampilkan pada layar device. Contoh dari _stateless widgets_ adalah sebagai berikut:
+
 ```
 class Frog extends StatelessWidget {
   const Frog({
@@ -493,10 +677,12 @@ class Frog extends StatelessWidget {
     return ColoredBox(color: color, child: child);
   }
 }
-``` 
+```
+
 <br>
 
 _Stateful widgets_ adalah widgets yang dapat berubah secara dinamis ketika terjadi perubahan data. _Stateful widgets_ bersifat immutable, namun memiliki class company State yang merepresentasi state dari widget tersebut. Contoh dari _stateful widgets_ adalah sebagai berikut:
+
 ```
 class Bird extends StatefulWidget {
   const Bird({
@@ -531,6 +717,7 @@ class _BirdState extends State<Bird> {
 ```
 
 ### Widget yang digunakan pada tugas ini serta fungsinya
+
 <ol>
 <li> MaterialApp</li>
 Merupakan root widget pada widget tree yang berguna untuk mengkonfigurasi penampilan aplikasi secara keseluruhan serta alur kerja dari aplikasi flutter kita
@@ -577,6 +764,7 @@ Widget yang membuat sebuah temporary message di bagian bawah layar
 </ol>
 
 ### Pengimplementasian checklist secara step-by-step
+
 1. Menginstall [Flutter](https://docs.flutter.dev/get-started/install) dan [Android Studio](https://developer.android.com/studio) seperti yang ada di dokumentasi websitenya
 
 2. Membuat proyek baru bernama **rey_inventory** dengan menjalankan `flutter create rey_inventory`
@@ -584,6 +772,7 @@ Widget yang membuat sebuah temporary message di bagian bawah layar
 3. Menjalankan perintah `flutter config --enable-web` untuk enable web support
 
 4. Membuat file baru bernama `menu.dart`, lalu isi dengan kode seperti berikut untuk membuat tampilan aplikasi yang berisi tiga tombol serta mengeluarkan SnackBar ketika diklik
+
 ```
 import 'package:flutter/material.dart';
 
@@ -701,6 +890,7 @@ class ShopCard extends StatelessWidget {
 ```
 
 5. Memodifikasi file `main.dart` agar mengextend _stateless widgets_ yang berisi seperti ini
+
 ```
 import 'package:flutter/material.dart';
 import 'package:rey_inventory/menu.dart';
@@ -729,6 +919,7 @@ class MyApp extends StatelessWidget {
 ```
 
 6. Untuk mengerjakan bonus, modifikasi class ShopItem agar memiliki atribut warna serta mengubah constructornya agar dapat menerima argumen berupa color
+
 ```
 class ShopItem {
   final String name;
@@ -738,7 +929,9 @@ class ShopItem {
   ShopItem(this.name, this.icon, this.color);
 }
 ```
+
 Kemudian, mengubah Widget build nya agar warna nya menjadi sesuai dengan input dari parameter
+
 ```
   Widget build(BuildContext context) {
     return Material(
@@ -746,4 +939,3 @@ Kemudian, mengubah Widget build nya agar warna nya menjadi sesuai dengan input d
       child: InkWell(
         . . .
 ```
-
